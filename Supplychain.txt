@@ -1,0 +1,136 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+contract AgriSupplyChain {
+
+uint public productId=0;//inital value for products
+    // Product Details
+    struct Product {
+        uint id;
+        string[] names;
+        address currentOwner;
+     address[] owners;
+        string image;
+        State state; 
+    uint[] period; // Time taken at each stage (in hours)
+        uint[] pricesFixed;
+    string[] location; 
+        uint[] expenditure;
+        string[] transportStage;//
+    }
+
+mapping(uint=>Product)public Products;//storing the all products in a mapping with theri id
+
+//Product details in Retialer stage
+
+struct RetailerStage{
+    uint id;
+    uint sales;
+    uint stockReceived;
+    uint price;
+    uint percent;
+    string location;
+
+}
+//mapping
+mapping(uint=>RetailerStage)public RetialDetails;
+//customer Review for the Product
+struct Review{
+    uint id;
+    uint quality;
+    uint rating;
+    string description;
+    string priceReview;
+}
+mapping (uint=>Review)public ProductReview;
+// Possible states of a product in the supply chain                                
+enum State { Harvest,  InProduction, Retialer,Customer }
+
+function CreateProduct(
+    string memory _name,
+   string memory _image,
+      uint _period,
+
+    uint _price,
+    string memory _location,
+    uint _expenditure,
+    string memory _transportStage
+
+) public   {
+    productId++;
+    Products[productId].id=productId;
+     Products[productId].names.push(_name);
+     Products[productId].image = _image;
+     Products[productId].state = State.Harvest;
+     Products[productId].currentOwner=msg.sender;
+    Products[productId].owners.push(msg.sender);
+    Products[productId].period.push(_period);
+     Products[productId].pricesFixed.push(_price);
+    Products[productId].location.push(_location);
+    Products[productId].expenditure.push(_expenditure);
+    Products[productId].transportStage.push(_transportStage);
+}
+
+modifier IsOwner(uint _id){
+    require(Products[_id].id!=_id,"Incorrect Product id!");
+    require(msg.sender==Products[_id].currentOwner,"Not the Product Owner");
+    _;
+}
+//Transfer Product OwnerShip in supply Chain
+function TransferOwnerShip(uint _id,address _newOwner)public IsOwner(_id){
+    require(msg.sender!=_newOwner,"This is the current Owner");
+    if(Products[_id].state==State.Harvest){
+        Products[_id].state=State.InProduction;
+    }
+    else if(Products[_id].state==State.InProduction){
+        Products[_id].state=State.Retialer;
+    }
+   
+    Products[_id].currentOwner=_newOwner;
+    Products[_id].owners.push(_newOwner);
+}
+//function to update product details in t next level supply chain 
+function UpdateChain(
+uint _id ,
+string memory _name,
+uint _period,
+uint _pricesFixed,
+string memory _location,
+uint _expenditure,
+string memory _transportStage)public IsOwner(_id){
+//this function is available for stages InProduction
+require(Products[_id].state==State.InProduction,"This stage no update permission!");
+Products[_id].names.push(_name);
+ Products[_id].period.push(_period);
+Products[_id].pricesFixed.push(_pricesFixed);
+Products[_id].location.push(_location);
+Products[_id].expenditure.push(_expenditure);              
+}
+
+
+//Enter Product details by Retailer
+
+function RetialerDetails(uint _id,uint _sales,
+uint _stockReceived,uint _price,uint _percent,string memory _location)public IsOwner(_id) {
+   
+RetialDetails[_id]=RetailerStage(_id,_sales,_stockReceived,_price,_percent,_location);
+
+}
+
+//Customer Review for the product
+
+function CustomerReview(uint _id,uint _quality,
+uint _rating,string memory _description,
+string memory _priceReview)public {
+    require(Products[_id].id==_id,"No Product exist!");
+    require(Products[_id].state==State.Customer,"Not Customer Stage");
+
+ ProductReview[_id]=Review(_id,_quality,_rating,_description,_priceReview);
+
+
+
+}
+
+
+
+
+}
